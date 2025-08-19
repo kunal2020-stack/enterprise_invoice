@@ -333,7 +333,7 @@ def main():
         print("⚠️  Skipping invoice tests - no products were created")
     
     # Test 5: Summary
-    print("\n📋 PHASE 4: Test Summary")
+    print("\n📋 PHASE 5: Test Summary")
     print("=" * 50)
     print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
     
