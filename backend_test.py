@@ -396,6 +396,12 @@ def main():
         
         # Test getting all invoices
         tester.test_get_invoices()
+        
+        # Test invoice status update
+        if invoice_success and invoice_data.get('id'):
+            invoice_id = invoice_data.get('id')
+            tester.test_update_invoice_status(invoice_id, "sent")
+            tester.test_update_invoice_status(invoice_id, "paid")
     else:
         print("⚠️  Skipping invoice tests - no products were created")
     
