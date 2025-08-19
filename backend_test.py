@@ -285,7 +285,54 @@ def main():
         first_product = products_created[0]
         tester.test_update_product(first_product['id'], 55000.00)
     
-    # Test 4: Summary
+    # Test 4: Invoice Management Testing
+    print("\n📋 PHASE 4: Invoice Management Testing")
+    
+    # Create test invoice with products we created
+    if products_created:
+        # Prepare customer data
+        customer_data = {
+            "name": "Test Customer",
+            "email": "test@example.com",
+            "phone": "+91-9876543210",
+            "address": "123 Test Street",
+            "city": "Test City",
+            "state": "Test State",
+            "pincode": "123456"
+        }
+        
+        # Prepare invoice items using created products
+        items_data = []
+        for i, product in enumerate(products_created[:2]):  # Use first 2 products
+            items_data.append({
+                "product_id": product['id'],
+                "product_name": product['name'],
+                "description": product.get('description', ''),
+                "quantity": i + 1,  # 1, 2, etc.
+                "rate": product['current_price'],
+                "amount": (i + 1) * product['current_price']
+            })
+        
+        # Create invoice
+        invoice_success, invoice_data = tester.test_create_invoice(customer_data, items_data)
+        
+        if invoice_success:
+            print(f"✅ Invoice created: {invoice_data.get('invoice_number', 'Unknown')}")
+            print(f"   Customer: {invoice_data.get('customer', {}).get('name', 'Unknown')}")
+            print(f"   Total Amount: ₹{invoice_data.get('total_amount', 0)}")
+            print(f"   Items: {len(invoice_data.get('items', []))}")
+            
+            # Test getting the created invoice
+            invoice_id = invoice_data.get('id')
+            if invoice_id:
+                tester.test_get_invoice_by_id(invoice_id)
+        
+        # Test getting all invoices
+        tester.test_get_invoices()
+    else:
+        print("⚠️  Skipping invoice tests - no products were created")
+    
+    # Test 5: Summary
     print("\n📋 PHASE 4: Test Summary")
     print("=" * 50)
     print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
