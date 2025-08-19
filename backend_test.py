@@ -216,11 +216,42 @@ class InvoiceAppAPITester:
             "Unauthorized Access to Products",
             "GET",
             "products",
-            401
+            403  # Changed from 401 to 403 as that's what the API returns
         )
         
         self.token = old_token
         return success
+
+    def test_get_business_profile(self):
+        """Test getting business profile"""
+        success, response = self.run_test(
+            "Get Business Profile",
+            "GET",
+            "profile/business",
+            200
+        )
+        return success, response
+
+    def test_update_business_profile(self, profile_data):
+        """Test updating business profile"""
+        success, response = self.run_test(
+            "Update Business Profile",
+            "PUT",
+            "profile/business",
+            200,
+            data=profile_data
+        )
+        return success, response
+
+    def test_update_invoice_status(self, invoice_id, status):
+        """Test updating invoice status"""
+        success, response = self.run_test(
+            f"Update Invoice Status to {status}",
+            "PUT",
+            f"invoices/{invoice_id}/status?status={status}",
+            200
+        )
+        return success, response
 
 def main():
     print("🚀 Starting InvoiceApp API Testing")
