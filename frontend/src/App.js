@@ -1699,6 +1699,7 @@ const Layout = ({ children }) => {
                 <TabsTrigger value="dashboard" className="data-[state=active]:bg-white">Dashboard</TabsTrigger>
                 <TabsTrigger value="products" className="data-[state=active]:bg-white">Products</TabsTrigger>
                 <TabsTrigger value="invoices" className="data-[state=active]:bg-white">Invoices</TabsTrigger>
+                <TabsTrigger value="profile" className="data-[state=active]:bg-white">Profile</TabsTrigger>
                 {user?.role === 'admin' && (
                   <TabsTrigger value="users" className="data-[state=active]:bg-white">Users</TabsTrigger>
                 )}
@@ -1727,6 +1728,9 @@ const Layout = ({ children }) => {
           </TabsContent>
           <TabsContent value="invoices">
             <InvoicesPage />
+          </TabsContent>
+          <TabsContent value="profile">
+            <Profile />
           </TabsContent>
           {user?.role === 'admin' && (
             <TabsContent value="users">
