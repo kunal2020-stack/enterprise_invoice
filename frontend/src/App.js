@@ -466,7 +466,7 @@ const Products = () => {
 };
 
 // Placeholder components for other sections
-const Invoices = () => (
+const InvoicesPage = () => (
   <div className="space-y-6">
     <h2 className="text-3xl font-bold text-slate-800">Invoices</h2>
     <Card>
@@ -479,7 +479,7 @@ const Invoices = () => (
   </div>
 );
 
-const Users = () => (
+const UsersPage = () => (
   <div className="space-y-6">
     <h2 className="text-3xl font-bold text-slate-800">Users</h2>
     <Card>
