@@ -535,11 +535,11 @@ const Layout = ({ children }) => {
             <Products />
           </TabsContent>
           <TabsContent value="invoices">
-            <Invoices />
+            <InvoicesPage />
           </TabsContent>
           {user?.role === 'admin' && (
             <TabsContent value="users">
-              <Users />
+              <UsersPage />
             </TabsContent>
           )}
         </Tabs>
