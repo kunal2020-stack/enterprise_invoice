@@ -1308,11 +1308,36 @@ const CreateInvoice = ({ onClose, onSuccess }) => {
               />
             </div>
             <div>
+              <Label htmlFor="customer-gst">GST Number</Label>
+              <Input
+                id="customer-gst"
+                value={customer.gst_number}
+                onChange={(e) => setCustomer({ ...customer, gst_number: e.target.value })}
+                placeholder="22AAAAA0000A1Z5"
+              />
+            </div>
+            <div>
               <Label htmlFor="customer-city">City</Label>
               <Input
                 id="customer-city"
                 value={customer.city}
                 onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-state">State</Label>
+              <Input
+                id="customer-state"
+                value={customer.state}
+                onChange={(e) => setCustomer({ ...customer, state: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-pincode">Pincode</Label>
+              <Input
+                id="customer-pincode"
+                value={customer.pincode}
+                onChange={(e) => setCustomer({ ...customer, pincode: e.target.value })}
               />
             </div>
             <div className="md:col-span-2">
