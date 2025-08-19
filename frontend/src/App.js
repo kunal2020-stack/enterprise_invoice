@@ -25,7 +25,20 @@ import {
   Users,
   Eye,
   Edit,
-  Download
+  Download,
+  User,
+  Mail,
+  Send,
+  Building,
+  MapPin,
+  Phone,
+  Globe,
+  CreditCard,
+  Printer,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  XCircle
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
