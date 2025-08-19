@@ -43,6 +43,45 @@ class InvoiceStatus(str, Enum):
     PAID = "paid"
     OVERDUE = "overdue"
 
+# User Business Profile Model
+class BusinessProfile(BaseModel):
+    company_name: str = "Your Company Name"
+    gst_number: str = "22AAAAA0000A1Z5"
+    pan_number: Optional[str] = "AAAAA0000A"
+    address_line1: str = "123 Business Street"
+    address_line2: Optional[str] = "Suite 456"
+    city: str = "Business City"
+    state: str = "Business State"
+    state_code: str = "22"
+    pincode: str = "123456"
+    country: str = "India"
+    phone: str = "+91 98765 43210"
+    email: EmailStr = "business@example.com"
+    website: Optional[str] = "www.yourbusiness.com"
+    bank_name: str = "State Bank of India"
+    account_number: str = "1234567890"
+    ifsc_code: str = "SBIN0001234"
+    account_holder: str = "Your Company Name"
+
+class BusinessProfileUpdate(BaseModel):
+    company_name: Optional[str] = None
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    state_code: Optional[str] = None
+    pincode: Optional[str] = None
+    country: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    website: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    account_holder: Optional[str] = None
+
 # Models
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -51,6 +90,7 @@ class User(BaseModel):
     full_name: str
     role: UserRole = UserRole.USER
     is_active: bool = True
+    business_profile: Optional[BusinessProfile] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
@@ -109,6 +149,7 @@ class Customer(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     pincode: Optional[str] = None
+    gst_number: Optional[str] = None
 
 class BankDetails(BaseModel):
     bank_name: str
@@ -129,6 +170,9 @@ class Invoice(BaseModel):
     notes: Optional[str] = None
     status: InvoiceStatus = InvoiceStatus.DRAFT
     created_by: str
+    business_profile: Optional[BusinessProfile] = None
+    invoice_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -138,6 +182,7 @@ class InvoiceCreate(BaseModel):
     tax_rate: float = 18.0
     bank_details: Optional[BankDetails] = None
     notes: Optional[str] = None
+    due_date: Optional[datetime] = None
 
 class DashboardStats(BaseModel):
     total_invoices: int
@@ -185,6 +230,8 @@ def prepare_for_mongo(data):
         for key, value in data.items():
             if isinstance(value, datetime):
                 data[key] = value.isoformat()
+            elif isinstance(value, dict):
+                data[key] = prepare_for_mongo(value)
     return data
 
 def parse_from_mongo(item):
@@ -195,6 +242,8 @@ def parse_from_mongo(item):
                     item[key] = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 except:
                     pass
+            elif isinstance(value, dict):
+                item[key] = parse_from_mongo(value)
     return item
 
 # Auth routes
@@ -217,10 +266,11 @@ async def create_user(user_data: UserCreate, admin: User = Depends(get_admin_use
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already exists")
     
-    # Create user
+    # Create user with default business profile
     hashed_password = hash_password(user_data.password)
     user_dict = user_data.dict()
     user_dict['password'] = hashed_password
+    user_dict['business_profile'] = BusinessProfile().dict()
     user_obj = User(**{k: v for k, v in user_dict.items() if k != 'password'})
     
     user_mongo_data = prepare_for_mongo(user_obj.dict())
@@ -232,6 +282,33 @@ async def create_user(user_data: UserCreate, admin: User = Depends(get_admin_use
 @api_router.get("/auth/me")
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
+# Profile routes
+@api_router.get("/profile/business", response_model=BusinessProfile)
+async def get_business_profile(current_user: User = Depends(get_current_user)):
+    user = await db.users.find_one({"username": current_user.username})
+    if not user or not user.get('business_profile'):
+        # Return default business profile
+        return BusinessProfile()
+    return BusinessProfile(**user['business_profile'])
+
+@api_router.put("/profile/business", response_model=BusinessProfile)
+async def update_business_profile(profile_data: BusinessProfileUpdate, current_user: User = Depends(get_current_user)):
+    # Get current profile
+    user = await db.users.find_one({"username": current_user.username})
+    current_profile = user.get('business_profile', BusinessProfile().dict())
+    
+    # Update with new data
+    update_data = {k: v for k, v in profile_data.dict().items() if v is not None}
+    current_profile.update(update_data)
+    
+    # Update in database
+    await db.users.update_one(
+        {"username": current_user.username},
+        {"$set": {"business_profile": current_profile}}
+    )
+    
+    return BusinessProfile(**current_profile)
 
 # Product routes
 @api_router.post("/products", response_model=Product)
@@ -285,6 +362,14 @@ async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depen
     count = await db.invoices.count_documents({})
     invoice_number = f"INV-{count + 1:04d}"
     
+    # Get user's business profile
+    user = await db.users.find_one({"username": current_user.username})
+    business_profile = user.get('business_profile')
+    if business_profile:
+        business_profile = BusinessProfile(**business_profile)
+    else:
+        business_profile = BusinessProfile()
+    
     # Calculate totals
     subtotal = sum(item.amount for item in invoice_data.items)
     tax_amount = subtotal * (invoice_data.tax_rate / 100)
@@ -300,7 +385,9 @@ async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depen
         total_amount=total_amount,
         bank_details=invoice_data.bank_details,
         notes=invoice_data.notes,
-        created_by=current_user.username
+        created_by=current_user.username,
+        business_profile=business_profile,
+        due_date=invoice_data.due_date
     )
     
     invoice_mongo_data = prepare_for_mongo(invoice_obj.dict())
@@ -318,6 +405,16 @@ async def get_invoice(invoice_id: str, current_user: User = Depends(get_current_
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return Invoice(**parse_from_mongo(invoice))
+
+@api_router.put("/invoices/{invoice_id}/status")
+async def update_invoice_status(invoice_id: str, status: InvoiceStatus, current_user: User = Depends(get_current_user)):
+    result = await db.invoices.update_one(
+        {"id": invoice_id}, 
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return {"message": "Invoice status updated successfully"}
 
 # Dashboard routes
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
@@ -381,6 +478,7 @@ async def create_admin_user():
             "full_name": "System Administrator",
             "role": "admin",
             "is_active": True,
+            "business_profile": BusinessProfile().dict(),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "password": hash_password("admin123")  # Change this in production
         }
