@@ -425,6 +425,197 @@ async def update_invoice_status(invoice_id: str, status: InvoiceStatus, current_
     return {"message": "Invoice status updated successfully"}
 
 # Dashboard routes
+# PDF Generation Function
+def generate_invoice_pdf(invoice: Invoice) -> io.BytesIO:
+    """Generate PDF for invoice using ReportLab"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=1  # Center alignment
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        spaceAfter=12,
+        textColor=colors.black
+    )
+    
+    normal_style = styles['Normal']
+    
+    # Build PDF content
+    story = []
+    
+    # Company Header
+    company_name = invoice.business_profile.company_name if invoice.business_profile else "Your Company Name"
+    story.append(Paragraph(f"<b>{company_name}</b>", title_style))
+    
+    if invoice.business_profile:
+        company_info = f"""
+        {invoice.business_profile.address_line1}<br/>
+        {invoice.business_profile.address_line2 or ''}<br/>
+        {invoice.business_profile.city}, {invoice.business_profile.state} - {invoice.business_profile.pincode}<br/>
+        GST No: {invoice.business_profile.gst_number} | PAN: {invoice.business_profile.pan_number or ''}<br/>
+        Phone: {invoice.business_profile.phone} | Email: {invoice.business_profile.email}
+        """
+        story.append(Paragraph(company_info, normal_style))
+    
+    story.append(Spacer(1, 20))
+    
+    # Invoice Header
+    story.append(Paragraph("<b>TAX INVOICE</b>", heading_style))
+    
+    # Invoice details table
+    invoice_details_data = [
+        ['Invoice No:', invoice.invoice_number, 'Date:', invoice.invoice_date.strftime('%d/%m/%Y')],
+        ['Status:', invoice.status.upper(), 'State Code:', invoice.business_profile.state_code if invoice.business_profile else '00']
+    ]
+    
+    invoice_details_table = Table(invoice_details_data, colWidths=[1*inch, 1.5*inch, 1*inch, 1.5*inch])
+    invoice_details_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(invoice_details_table)
+    story.append(Spacer(1, 20))
+    
+    # Customer details
+    story.append(Paragraph("<b>Bill To:</b>", heading_style))
+    customer_info = f"""
+    <b>{invoice.customer.name}</b><br/>
+    {invoice.customer.address or ''}<br/>
+    {invoice.customer.city or ''}, {invoice.customer.state or ''} - {invoice.customer.pincode or ''}<br/>
+    {f'GST No: {invoice.customer.gst_number}<br/>' if invoice.customer.gst_number else ''}
+    {f'Phone: {invoice.customer.phone}<br/>' if invoice.customer.phone else ''}
+    {f'Email: {invoice.customer.email}' if invoice.customer.email else ''}
+    """
+    story.append(Paragraph(customer_info, normal_style))
+    story.append(Spacer(1, 20))
+    
+    # Items table
+    items_data = [['S.No', 'Description', 'Qty', 'Rate (₹)', 'Amount (₹)']]
+    
+    for i, item in enumerate(invoice.items, 1):
+        description = f"{item.product_name}"
+        if item.description:
+            description += f"\n{item.description}"
+        
+        items_data.append([
+            str(i),
+            description,
+            str(item.quantity),
+            f"₹{item.rate:.2f}",
+            f"₹{item.amount:.2f}"
+        ])
+    
+    items_table = Table(items_data, colWidths=[0.5*inch, 3*inch, 0.8*inch, 1*inch, 1.2*inch])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),  # Description left aligned
+        ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),  # Amount columns right aligned
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP')
+    ]))
+    
+    story.append(items_table)
+    story.append(Spacer(1, 20))
+    
+    # Totals table
+    cgst = invoice.tax_amount / 2
+    sgst = invoice.tax_amount / 2
+    
+    totals_data = [
+        ['Subtotal:', f"₹{invoice.subtotal:.2f}"],
+        [f'CGST ({invoice.tax_rate/2:.1f}%):', f"₹{cgst:.2f}"],
+        [f'SGST ({invoice.tax_rate/2:.1f}%):', f"₹{sgst:.2f}"],
+        ['Total Amount:', f"₹{invoice.total_amount:.2f}"]
+    ]
+    
+    totals_table = Table(totals_data, colWidths=[4*inch, 1.5*inch])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(totals_table)
+    story.append(Spacer(1, 20))
+    
+    # Notes
+    if invoice.notes:
+        story.append(Paragraph("<b>Notes:</b>", heading_style))
+        story.append(Paragraph(invoice.notes, normal_style))
+        story.append(Spacer(1, 12))
+    
+    # Bank details
+    if invoice.business_profile:
+        story.append(Paragraph("<b>Bank Details:</b>", heading_style))
+        bank_info = f"""
+        Bank: {invoice.business_profile.bank_name}<br/>
+        Account No: {invoice.business_profile.account_number}<br/>
+        IFSC: {invoice.business_profile.ifsc_code}<br/>
+        Account Holder: {invoice.business_profile.account_holder}
+        """
+        story.append(Paragraph(bank_info, normal_style))
+        story.append(Spacer(1, 20))
+    
+    # Footer
+    story.append(Paragraph("<i>This is a computer generated invoice and does not require signature.</i>", normal_style))
+    story.append(Paragraph("<i>Thank you for your business!</i>", normal_style))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+@api_router.get("/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Generate and download invoice PDF"""
+    try:
+        # Get invoice
+        invoice_data = await db.invoices.find_one({"id": invoice_id})
+        if not invoice_data:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        
+        invoice = Invoice(**parse_from_mongo(invoice_data))
+        
+        # Generate PDF
+        pdf_buffer = generate_invoice_pdf(invoice)
+        
+        # Return PDF as streaming response
+        return StreamingResponse(
+            io.BytesIO(pdf_buffer.read()),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=invoice_{invoice.invoice_number}.pdf"}
+        )
+        
+    except Exception as e:
+        logger.error(f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     # Get total invoices
