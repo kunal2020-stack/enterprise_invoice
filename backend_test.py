@@ -170,6 +170,43 @@ class InvoiceAppAPITester:
         )
         return success, response
 
+    def test_create_invoice(self, customer_data, items_data, tax_rate=18.0):
+        """Create an invoice"""
+        invoice_data = {
+            "customer": customer_data,
+            "items": items_data,
+            "tax_rate": tax_rate,
+            "notes": "Test invoice created by automated testing"
+        }
+        success, response = self.run_test(
+            "Create Invoice",
+            "POST",
+            "invoices",
+            200,
+            data=invoice_data
+        )
+        return success, response
+
+    def test_get_invoices(self):
+        """Get all invoices"""
+        success, response = self.run_test(
+            "Get All Invoices",
+            "GET",
+            "invoices",
+            200
+        )
+        return success, response
+
+    def test_get_invoice_by_id(self, invoice_id):
+        """Get specific invoice by ID"""
+        success, response = self.run_test(
+            f"Get Invoice by ID",
+            "GET",
+            f"invoices/{invoice_id}",
+            200
+        )
+        return success, response
+
     def test_unauthorized_access(self):
         """Test accessing protected endpoints without token"""
         old_token = self.token
