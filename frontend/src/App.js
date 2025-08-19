@@ -1139,7 +1139,8 @@ const CreateInvoice = ({ onClose, onSuccess }) => {
     address: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    gst_number: ''
   });
   const [items, setItems] = useState([{
     product_id: '',
