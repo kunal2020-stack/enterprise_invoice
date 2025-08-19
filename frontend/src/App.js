@@ -191,7 +191,294 @@ const Login = () => {
   );
 };
 
-// Dashboard Component
+// Profile Component
+const Profile = () => {
+  const [profile, setProfile] = useState({
+    company_name: '',
+    gst_number: '',
+    pan_number: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    state_code: '',
+    pincode: '',
+    country: 'India',
+    phone: '',
+    email: '',
+    website: '',
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
+    account_holder: ''
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await axios.get(`${API}/profile/business`);
+      setProfile(response.data);
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    
+    try {
+      await axios.put(`${API}/profile/business`, profile);
+      toast({
+        title: "Success",
+        description: "Business profile updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-600">Loading profile...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold text-slate-800">Business Profile</h2>
+        <Badge variant="outline" className="px-3 py-1">
+          <Building className="w-4 h-4 mr-2" />
+          Business Settings
+        </Badge>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Company Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Building className="w-5 h-5 mr-2" />
+              Company Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="company_name">Company Name *</Label>
+              <Input
+                id="company_name"
+                value={profile.company_name}
+                onChange={(e) => handleChange('company_name', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="gst_number">GST Number *</Label>
+              <Input
+                id="gst_number"
+                value={profile.gst_number}
+                onChange={(e) => handleChange('gst_number', e.target.value)}
+                placeholder="22AAAAA0000A1Z5"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="pan_number">PAN Number</Label>
+              <Input
+                id="pan_number"
+                value={profile.pan_number}
+                onChange={(e) => handleChange('pan_number', e.target.value)}
+                placeholder="AAAAA0000A"
+              />
+            </div>
+            <div>
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={profile.website}
+                onChange={(e) => handleChange('website', e.target.value)}
+                placeholder="www.yourcompany.com"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Address Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MapPin className="w-5 h-5 mr-2" />
+              Address Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <Label htmlFor="address_line1">Address Line 1 *</Label>
+              <Input
+                id="address_line1"
+                value={profile.address_line1}
+                onChange={(e) => handleChange('address_line1', e.target.value)}
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="address_line2">Address Line 2</Label>
+              <Input
+                id="address_line2"
+                value={profile.address_line2}
+                onChange={(e) => handleChange('address_line2', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="city">City *</Label>
+              <Input
+                id="city"
+                value={profile.city}
+                onChange={(e) => handleChange('city', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="state">State *</Label>
+              <Input
+                id="state"
+                value={profile.state}
+                onChange={(e) => handleChange('state', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="state_code">State Code *</Label>
+              <Input
+                id="state_code"
+                value={profile.state_code}
+                onChange={(e) => handleChange('state_code', e.target.value)}
+                placeholder="22"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="pincode">Pincode *</Label>
+              <Input
+                id="pincode"
+                value={profile.pincode}
+                onChange={(e) => handleChange('pincode', e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Phone className="w-5 h-5 mr-2" />
+              Contact Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                value={profile.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="+91 98765 43210"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={profile.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bank Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <CreditCard className="w-5 h-5 mr-2" />
+              Bank Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="bank_name">Bank Name *</Label>
+              <Input
+                id="bank_name"
+                value={profile.bank_name}
+                onChange={(e) => handleChange('bank_name', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="account_holder">Account Holder Name *</Label>
+              <Input
+                id="account_holder"
+                value={profile.account_holder}
+                onChange={(e) => handleChange('account_holder', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="account_number">Account Number *</Label>
+              <Input
+                id="account_number"
+                value={profile.account_number}
+                onChange={(e) => handleChange('account_number', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="ifsc_code">IFSC Code *</Label>
+              <Input
+                id="ifsc_code"
+                value={profile.ifsc_code}
+                onChange={(e) => handleChange('ifsc_code', e.target.value)}
+                placeholder="SBIN0001234"
+                required
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSaving} className="bg-slate-800 hover:bg-slate-900">
+            {isSaving ? "Saving..." : "Save Profile"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const { user } = useAuth();
