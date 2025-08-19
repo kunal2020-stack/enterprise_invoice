@@ -1490,6 +1490,8 @@ const InvoicesPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showInvoiceViewer, setShowInvoiceViewer] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -1514,6 +1516,43 @@ const InvoicesPage = () => {
   const handleInvoiceCreated = () => {
     fetchInvoices();
     setShowCreateInvoice(false);
+  };
+
+  const handleViewInvoice = async (invoiceId) => {
+    try {
+      const response = await axios.get(`${API}/invoices/${invoiceId}`);
+      setSelectedInvoice(response.data);
+      setShowInvoiceViewer(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load invoice details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusUpdate = () => {
+    fetchInvoices();
+    setShowInvoiceViewer(false);
+    setSelectedInvoice(null);
+  };
+
+  const sendInvoiceEmail = async (invoice) => {
+    if (!invoice.customer.email) {
+      toast({
+        title: "Error",
+        description: "Customer email not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Placeholder for email functionality
+    toast({
+      title: "Email Feature",
+      description: "Email functionality will be available soon with SendGrid integration",
+    });
   };
 
   if (showCreateInvoice) {
@@ -1580,16 +1619,33 @@ const InvoicesPage = () => {
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-slate-800">₹{invoice.total_amount.toLocaleString()}</p>
                   <p className="text-sm text-slate-500">
-                    {new Date(invoice.created_at).toLocaleDateString()}
+                    {new Date(invoice.invoice_date).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-slate-600">{invoice.items.length} items</p>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewInvoice(invoice.id)}
+                    >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    {invoice.customer.email && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => sendInvoiceEmail(invoice)}
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewInvoice(invoice.id)}
+                    >
                       <Download className="w-4 h-4" />
                     </Button>
                   </div>
@@ -1598,6 +1654,17 @@ const InvoicesPage = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {showInvoiceViewer && selectedInvoice && (
+        <InvoiceViewer 
+          invoice={selectedInvoice}
+          onClose={() => {
+            setShowInvoiceViewer(false);
+            setSelectedInvoice(null);
+          }}
+          onStatusUpdate={handleStatusUpdate}
+        />
       )}
     </div>
   );
