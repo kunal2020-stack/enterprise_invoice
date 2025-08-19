@@ -798,7 +798,39 @@ const InvoiceViewer = ({ invoice, onClose, onStatusUpdate }) => {
     }
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
+    try {
+      const response = await axios.get(`${API}/invoices/${invoice.id}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      // Create blob URL and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice_${invoice.invoice_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Success",
+        description: "Invoice PDF downloaded successfully",
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const printInvoice = () => {
+    // Create a clean print version
     const printWindow = window.open('', '_blank');
     const invoiceHTML = `
       <!DOCTYPE html>
