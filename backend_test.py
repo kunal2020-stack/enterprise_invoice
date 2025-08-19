@@ -278,7 +278,43 @@ def main():
     # Test unauthorized access
     tester.test_unauthorized_access()
     
-    # Test 2: Dashboard
+    # Test 2: Business Profile
+    print("\n📋 PHASE 2: Business Profile Testing")
+    
+    # Get current business profile
+    profile_success, profile_data = tester.test_get_business_profile()
+    if profile_success:
+        print(f"✅ Current business profile retrieved")
+        print(f"   Company: {profile_data.get('company_name', 'Not set')}")
+        print(f"   GST: {profile_data.get('gst_number', 'Not set')}")
+    
+    # Update business profile with realistic data
+    updated_profile = {
+        "company_name": "TechCorp Solutions Pvt Ltd",
+        "gst_number": "29ABCDE1234F1Z5",
+        "pan_number": "ABCDE1234F",
+        "address_line1": "Tech Park, Building A, Floor 5",
+        "address_line2": "Sector 62, Noida",
+        "city": "Noida",
+        "state": "Uttar Pradesh",
+        "state_code": "09",
+        "pincode": "201301",
+        "country": "India",
+        "phone": "+91-9876543210",
+        "email": "info@techcorp.com",
+        "website": "www.techcorp.com",
+        "bank_name": "HDFC Bank",
+        "account_number": "50100123456789",
+        "ifsc_code": "HDFC0001234",
+        "account_holder": "TechCorp Solutions Pvt Ltd"
+    }
+    
+    update_success, updated_data = tester.test_update_business_profile(updated_profile)
+    if update_success:
+        print(f"✅ Business profile updated successfully")
+        print(f"   Updated Company: {updated_data.get('company_name', 'Not set')}")
+    
+    # Test 3: Dashboard
     print("\n📋 PHASE 2: Dashboard Testing")
     dashboard_success, dashboard_data = tester.test_dashboard_stats()
     if dashboard_success:
